@@ -85,10 +85,13 @@ jobs:
       - name: Install NSIS
         run: choco install nsis -y --no-progress
       - name: Build Windows installer
-        shell: cmd
         run: |
-          set PATH=%PATH%;C:\Program Files (x86)\NSIS
-          makensis veronica_installer.nsi
+          $nsis = "C:\Program Files (x86)\NSIS\makensis.exe"
+          if (!(Test-Path $nsis)) {
+            $nsis = "C:\Program Files\NSIS\makensis.exe"
+          }
+          Write-Host "Using NSIS at: $nsis"
+          & $nsis veronica_installer.nsi
       - uses: actions/upload-artifact@v4
         with:
           name: veronica-windows
