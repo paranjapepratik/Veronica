@@ -71,7 +71,7 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install pyinstaller requests openpyxl biopython pillow
-      - name: Build executable
+      - name: Build Windows executable
         run: |
           pyinstaller --onefile --windowed `
             --name Veronica `
@@ -82,20 +82,10 @@ jobs:
             --hidden-import openpyxl `
             --hidden-import requests `
             veronica.py
-      - name: Install NSIS
-        run: choco install nsis -y --no-progress
-      - name: Build Windows installer
-        run: |
-          $nsis = "C:\Program Files (x86)\NSIS\makensis.exe"
-          if (!(Test-Path $nsis)) {
-            $nsis = "C:\Program Files\NSIS\makensis.exe"
-          }
-          Write-Host "Using NSIS at: $nsis"
-          & $nsis veronica_installer.nsi
       - uses: actions/upload-artifact@v4
         with:
           name: veronica-windows
-          path: Veronica_Setup_v3.0.exe
+          path: dist\Veronica.exe
 
   release:
     needs: [build-linux, build-windows]
@@ -116,14 +106,14 @@ jobs:
           body: |
             ## Veronica ${{ github.ref_name }}
 
-            | OS | File |
-            |----|------|
-            | 🐧 Linux | `veronica_3.0_amd64.deb` |
-            | 🪟 Windows | `Veronica_Setup_v3.0.exe` |
+            | OS | File | Instructions |
+            |----|------|-------------|
+            | 🐧 Linux | `veronica_3.0_amd64.deb` | `sudo dpkg -i veronica_3.0_amd64.deb` |
+            | 🪟 Windows | `Veronica.exe` | Double-click to run directly |
 
             ### Requirements:
             - Install [Ollama](https://ollama.com)
             - Run: `ollama pull llama3.1:8b`
           files: |
             veronica_3.0_amd64.deb
-            Veronica_Setup_v3.0.exe
+            Veronica.exe
