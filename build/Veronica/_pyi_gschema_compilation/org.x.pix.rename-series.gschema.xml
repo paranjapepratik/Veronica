@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+    
+  <schema path="/org/x/pix/rename-series/" id="org.x.pix.rename-series">
+    <key type="s" name="template">
+      <default>'####%E'</default>
+    </key>
+    <key type="i" name="start-at">
+      <default>1</default>
+    </key>
+    <key type="s" name="sort-by">
+      <default>'general::unsorted'</default>
+      <summary>Possible values include: general::unsorted, file::name, file::size, file::mtime, exif::photo::datetimeoriginal</summary>
+    </key>
+    <key type="b" name="reverse-order">
+      <default>false</default>
+    </key>
+    <key name="change-case" enum="org.x.pix.GthChangeCase">
+      <default>'none'</default>
+    </key>
+  </schema>
+
+</schemalist>

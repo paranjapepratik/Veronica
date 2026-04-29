@@ -1,0 +1,123 @@
+name: Build Veronica Installers
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install pyinstaller requests openpyxl biopython pillow
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --windowed \
+            --name Veronica \
+            --hidden-import Bio \
+            --hidden-import Bio.Entrez \
+            --hidden-import Bio.Medline \
+            --hidden-import openpyxl \
+            --hidden-import requests \
+            veronica.py
+      - name: Build deb
+        run: |
+          mkdir -p deb_package/usr/local/bin
+          mkdir -p deb_package/usr/share/applications
+          mkdir -p deb_package/usr/share/icons/hicolor/256x256/apps
+          mkdir -p deb_package/DEBIAN
+          cp dist/Veronica deb_package/usr/local/bin/veronica
+          chmod +x deb_package/usr/local/bin/veronica
+          cp veronica_icon.png deb_package/usr/share/icons/hicolor/256x256/apps/veronica.png
+          cat > deb_package/DEBIAN/control << CTRL
+          Package: veronica
+          Version: 3.0
+          Section: science
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Pratik Paranjape <paranjapepratik1@gmail.com>
+          Homepage: https://github.com/paranjapepratik/Veronica
+          Description: AI-Powered Literature Review Tool
+           Searches PubMed, downloads PDFs, uses Ollama AI to score papers.
+          CTRL
+          cat > deb_package/usr/share/applications/veronica.desktop << DESK
+          [Desktop Entry]
+          Name=Veronica
+          Comment=AI-Powered Literature Review Tool
+          Exec=/usr/local/bin/veronica
+          Icon=/usr/share/icons/hicolor/256x256/apps/veronica.png
+          Terminal=false
+          Type=Application
+          Categories=Science;Education;
+          DESK
+          dpkg-deb --build --root-owner-group deb_package veronica_3.0_amd64.deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: veronica-linux
+          path: veronica_3.0_amd64.deb
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install pyinstaller requests openpyxl biopython pillow
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --windowed `
+            --name Veronica `
+            --icon veronica_icon.ico `
+            --hidden-import Bio `
+            --hidden-import Bio.Entrez `
+            --hidden-import Bio.Medline `
+            --hidden-import openpyxl `
+            --hidden-import requests `
+            veronica.py
+      - name: Install NSIS
+        run: choco install nsis -y
+      - name: Build installer
+        run: makensis veronica_installer.nsi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: veronica-windows
+          path: Veronica_Setup_v3.0.exe
+
+  release:
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: veronica-linux
+      - uses: actions/download-artifact@v4
+        with:
+          name: veronica-windows
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Veronica ${{ github.ref_name }}
+          body: |
+            ## Veronica ${{ github.ref_name }}
+
+            | OS | File |
+            |----|------|
+            | Linux | `veronica_3.0_amd64.deb` |
+            | Windows | `Veronica_Setup_v3.0.exe` |
+
+            ### Requirements:
+            - Install [Ollama](https://ollama.com)
+            - Run: `ollama pull llama3.1:8b`
+          files: |
+            veronica_3.0_amd64.deb
+            Veronica_Setup_v3.0.exe

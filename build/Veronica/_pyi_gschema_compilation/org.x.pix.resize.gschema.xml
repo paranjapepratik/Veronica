@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+ 
+  <schema path="/org/x/pix/resize/" id="org.x.pix.resize">
+    <key name="unit" enum="org.x.pix.GthUnit">
+      <default>'percentage'</default>
+    </key>
+    <key type="d" name="width">
+      <default>100.0</default>
+    </key>
+    <key type="d" name="height">
+      <default>100.0</default>
+    </key>
+    <key type="i" name="aspect-ratio-width">
+      <default>1</default>
+    </key>
+    <key type="i" name="aspect-ratio-height">
+      <default>1</default>
+    </key>
+    <key name="aspect-ratio" enum="org.x.pix.GthAspectRatio">
+      <default>'image'</default>
+    </key>
+    <key type="b" name="aspect-ratio-invert">
+      <default>true</default>
+    </key>
+    <key type="b" name="high-quality">
+      <default>true</default>
+    </key>
+  </schema>
+
+</schemalist>

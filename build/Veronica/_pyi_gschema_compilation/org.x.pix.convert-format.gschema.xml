@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  
+  <schema path="/org/x/pix/convert-format/" id="org.x.pix.convert-format">
+    <key type="s" name="mime-type">
+      <default>'image/jpeg'</default>
+    </key>
+  </schema>
+  
+</schemalist>

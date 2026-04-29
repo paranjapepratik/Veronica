@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+
+  <schema path="/org/x/pix/resize-images/" id="org.x.pix.resize-images">
+    <key type="i" name="width">
+      <default>100</default>
+    </key>
+    <key type="i" name="height">
+      <default>100</default>
+    </key>
+    <key name="unit" enum="org.x.pix.GthUnit">
+      <default>'percentage'</default>
+    </key>
+    <key type="b" name="keep-aspect-ratio">
+      <default>true</default>
+    </key>
+    <key type="b" name="allow-swap-width-height">
+      <default>true</default>
+    </key>
+    <key type="s" name="mime-type">
+      <default>''</default>
+    </key>
+  </schema>
+
+</schemalist>

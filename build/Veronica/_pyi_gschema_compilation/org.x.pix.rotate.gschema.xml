@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+    
+  <schema path="/org/x/pix/rotate/" id="org.x.pix.rotate">
+    <key name="resize" enum="org.x.pix.GthTransformResize">
+      <default>'crop'</default>
+    </key>
+    <key type="b" name="keep-aspect-ratio">
+      <default>true</default>
+    </key>
+    <key name="grid-type" enum="org.x.pix.GthGridType">
+      <default>'thirds'</default>
+    </key>
+    <key type="s" name="background-color">
+      <default>'#000'</default>
+    </key>
+  </schema>
+
+</schemalist>

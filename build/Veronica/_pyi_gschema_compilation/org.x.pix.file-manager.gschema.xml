@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  
+  <schema path="/org/x/pix/file-manager/" id="org.x.pix.file-manager">
+    <key type="s" name="last-folder">
+      <default>''</default>
+    </key>
+    <key type="b" name="view-destination">
+      <default>true</default>
+    </key>
+    <key type="as" name="copy-destination-history">
+      <default>[]</default>
+    </key>
+  </schema>
+
+</schemalist>

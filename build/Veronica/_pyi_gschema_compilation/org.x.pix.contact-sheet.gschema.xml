@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  
+  <schema path="/org/x/pix/contact-sheet/" id="org.x.pix.contact-sheet">
+    <child schema="org.x.pix.contact-sheet.contact-sheet" name="contact-sheet"/>
+    <child schema="org.x.pix.contact-sheet.image-wall" name="image-wall"/>
+  </schema>
+  
+  <schema path="/org/x/pix/contact-sheet/contact-sheet/" id="org.x.pix.contact-sheet.contact-sheet">
+    <key type="s" name="header">
+      <default>''</default>
+    </key>
+    <key type="s" name="footer">
+      <default>''</default>
+    </key>
+    <key type="s" name="destination">
+      <default>''</default>
+    </key>
+    <key type="s" name="template">
+      <default>'###'</default>
+    </key>
+    <key type="s" name="mime-type">
+      <default>'image/jpeg'</default>
+    </key>
+    <key type="b" name="html-image-map">
+      <default>false</default>
+    </key>
+    <key type="s" name="theme">
+      <default>'default.cst'</default>
+    </key>
+    <key type="i" name="images-per-page">
+      <default>25</default>
+    </key>
+    <key type="b" name="single-page">
+      <default>false</default>
+    </key>
+    <key type="i" name="columns">
+      <default>5</default>
+    </key>
+    <key type="s" name="sort-type">
+      <default>'general::unsorted'</default>
+    </key>
+    <key type="b" name="sort-inverse">
+      <default>false</default>
+    </key>
+    <key type="b" name="same-size">
+      <default>true</default>
+    </key>
+    <key type="i" name="thumbnail-size">
+      <default>128</default>
+    </key>
+    <key type="b" name="squared-thumbnail">
+      <default>false</default>
+    </key>
+    <key type="s" name="thumbnail-caption">
+      <default>'general::datetime,general::dimensions,gth::file::display-size'</default>
+    </key>
+  </schema>
+  
+  <schema path="/org/x/pix/contact-sheet/image-wall/" id="org.x.pix.contact-sheet.image-wall">
+    <key type="s" name="destination">
+      <default>''</default>
+    </key>
+    <key type="s" name="template">
+      <default>'###'</default>
+    </key>
+    <key type="s" name="mime-type">
+      <default>'image/jpeg'</default>
+    </key>
+    <key type="i" name="images-per-page">
+      <default>25</default>
+    </key>
+    <key type="b" name="single-page">
+      <default>false</default>
+    </key>
+    <key type="i" name="columns">
+      <default>5</default>
+    </key>
+    <key type="s" name="sort-type">
+      <default>'general::unsorted'</default>
+    </key>
+    <key type="b" name="sort-inverse">
+      <default>false</default>
+    </key>
+    <key type="i" name="thumbnail-size">
+      <default>128</default>
+    </key>
+  </schema>
+
+</schemalist>

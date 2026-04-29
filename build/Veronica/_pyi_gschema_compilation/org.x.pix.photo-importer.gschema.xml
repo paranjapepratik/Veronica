@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  
+  <schema path="/org/x/pix/photo-importer/" id="org.x.pix.photo-importer">
+    <key type="b" name="delete-from-device">
+      <default>false</default>
+    </key>
+    <key type="b" name="adjust-orientation">
+      <default>false</default>
+    </key>
+  </schema>
+
+</schemalist>

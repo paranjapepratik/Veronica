@@ -1,0 +1,9 @@
+Package: veronica
+Version: 3.0
+Section: science
+Priority: optional
+Architecture: amd64
+Maintainer: Pratik Paranjape <paranjapepratik1@gmail.com>
+Homepage: https://github.com/paranjapepratik/Veronica
+Description: AI-Powered Literature Review Tool
+ Searches PubMed, downloads PDFs, uses Ollama AI to score papers.

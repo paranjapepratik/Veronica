@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+    
+  <schema path="/org/x/pix/image-print/" id="org.x.pix.image-print">
+    <key type="s" name="caption">
+      <default>''</default>
+    </key>
+    <key type="s" name="font-name">
+      <default>'sans normal 12'</default>
+    </key>
+    <key type="s" name="header-font-name">
+      <default>'sans bold 12'</default>
+    </key>
+    <key type="s" name="footer-font-name">
+      <default>'sans normal 8'</default>
+    </key>
+    <key type="s" name="header">
+      <default>''</default>
+    </key>
+    <key type="s" name="footer">
+      <default>''</default>
+    </key>
+    <key type="i" name="n-rows">
+      <default>1</default>
+    </key>
+    <key type="i" name="n-columns">
+      <default>1</default>
+    </key>
+    <key name="unit" enum="org.x.pix.GthMetric">
+      <default>'millimeters'</default>
+    </key>
+  </schema>
+
+</schemalist>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+    
+  <schema path="/org/x/pix/crop/" id="org.x.pix.crop">
+    <key name="grid-type" enum="org.x.pix.GthGridType">
+      <default>'thirds'</default>
+    </key>
+    <key name="aspect-ratio" enum="org.x.pix.GthAspectRatio">
+      <default>'none'</default>
+    </key>
+    <key type="b" name="aspect-ratio-invert">
+      <default>false</default>
+    </key>
+    <key type="i" name="aspect-ratio-width">
+      <default>1</default>
+    </key>
+    <key type="i" name="aspect-ratio-height">
+      <default>1</default>
+    </key>
+    <key type="b" name="bind-dimensions">
+      <default>false</default>
+    </key>
+    <key type="i" name="bind-factor">
+      <default>8</default>
+    </key>
+  </schema>
+
+</schemalist>
