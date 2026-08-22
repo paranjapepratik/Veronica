@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+
+  <schema path="/org/x/pix/change-date/" id="org.x.pix.change-date">
+    <key type="b" name="set-last-modified-date">
+      <default>false</default>
+    </key>
+    <key type="b" name="set-comment-date">
+      <default>false</default>
+    </key>
+    <key type="b" name="to-following-date">
+      <default>false</default>
+    </key>
+    <key type="s" name="date">
+      <default>''</default>
+    </key>
+    <key type="b" name="to-file-modified-date">
+      <default>false</default>
+    </key>
+    <key type="b" name="to-file-creation-date">
+      <default>false</default>
+    </key>
+    <key type="b" name="to-photo-original-date">
+      <default>false</default>
+    </key>
+    <key type="b" name="adjust-time">
+      <default>false</default>
+    </key>
+    <key type="i" name="time-adjustment">
+      <default>0</default>
+    </key>
+  </schema>
+
+</schemalist>

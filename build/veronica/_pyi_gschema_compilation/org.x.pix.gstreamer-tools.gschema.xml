@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  
+  <schema path="/org/x/pix/gstreamer-tools/" id="org.x.pix.gstreamer-tools">
+    <key type="s" name="screenshot-location">
+      <default>'file://~'</default>
+    </key>
+    <key type="i" name="volume">
+      <default>100</default>
+    </key>
+  </schema>
+
+</schemalist>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  
+  <schema path="/org/x/pix/slideshow/" id="org.x.pix.slideshow">
+    <key type="d" name="change-delay">
+      <default>5.0</default>
+    </key>
+    <key type="b" name="wrap-around">
+      <default>false</default>
+    </key>
+    <key type="b" name="automatic">
+      <default>true</default>
+    </key>
+    <key type="s" name="transition">
+      <default>'fade-in'</default>
+    </key>
+    <key type="b" name="random-order">
+      <default>false</default>
+    </key>
+  </schema>
+
+</schemalist>

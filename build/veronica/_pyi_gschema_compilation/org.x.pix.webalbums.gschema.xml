@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  
+  <schema path="/org/x/pix/webalbums/" id="org.x.pix.webalbums">
+    <key type="s" name="index-file">
+      <default>'index.html'</default>
+    </key>
+    <key type="s" name="destination">
+      <default>''</default>
+    </key>
+    <key type="b" name="copy-images">
+      <default>false</default>
+    </key>
+    <key type="b" name="resize-images">
+      <default>false</default>
+    </key>
+    <key type="i" name="resize-width">
+      <default>640</default>
+    </key>
+    <key type="i" name="resize-height">
+      <default>480</default>
+    </key>
+    <key type="i" name="images-per-index">
+      <default>12</default>
+    </key>
+    <key type="b" name="single-index">
+      <default>false</default>
+    </key>
+    <key type="i" name="columns">
+      <default>4</default>
+    </key>
+    <key type="b" name="adapt-to-width">
+      <default>true</default>
+    </key>
+    <key type="s" name="sort-type">
+      <default>'file::mtime'</default>
+    </key>
+    <key type="b" name="sort-inverse">
+      <default>false</default>
+    </key>
+    <key type="s" name="header">
+      <default>''</default>
+    </key>
+    <key type="s" name="footer">
+      <default>''</default>
+    </key>
+    <key type="s" name="image-page-header">
+      <default>''</default>
+    </key>
+    <key type="s" name="image-page-footer">
+      <default>''</default>
+    </key>
+    <key type="s" name="theme">
+      <default>'Wiki'</default>
+    </key>
+    <key type="b" name="enable-thumbnail-caption">
+      <default>true</default>
+    </key>
+    <key type="s" name="thumbnail-caption">
+      <default>'general::datetime,general::dimensions,gth::file::display-size'</default>
+    </key>
+    <key type="b" name="enable-image-description">
+      <default>true</default>
+    </key>
+    <key type="b" name="enable-image-attributes">
+      <default>true</default>
+    </key>
+    <key type="s" name="image-attributes">
+      <default>'gth::file::display-size,standard::fast-content-type,general::dimensions,general::format,general::location,general::datetime,general::rating,Exif::Image::Make,Exif::Image::Model,Exif::Image::Software,Exif::Image::Artist,Exif::Image::Copyright,Exif::Photo::ISOSpeedRatings,Exif::Photo::BrightnessValue,Exif::Photo::FNumber,Exif::Photo::ApertureValue,Exif::Photo::MaxApertureValue,Exif::Photo::ExposureTime,Exif::Photo::ExposureProgram,Exif::Photo::ExposureIndex,Exif::Photo::ExposureBiasValue,Exif::Photo::ExposureMode,Exif::Photo::ShutterSpeedValue,Exif::Photo::MeteringMode,Exif::Photo::LightSource,Exif::Photo::WhiteBalance,Exif::Photo::Flash,Exif::Photo::FocalLength,Exif::Photo::SubjectArea,Exif::Photo::Contrast,Exif::Photo::Saturation,Exif::Photo::Sharpness'</default>
+    </key>
+    <child schema="org.x.pix.webalbums.directories" name="directories"/>
+  </schema>
+  
+  <schema path="/org/x/pix/webalbums/directories/" id="org.x.pix.webalbums.directories">
+    <key type="s" name="previews">
+      <default>'previews'</default>
+    </key>
+    <key type="s" name="thumbnails">
+      <default>'thumbnails'</default>
+    </key>
+    <key type="s" name="images">
+      <default>'images'</default>
+    </key>
+    <key type="s" name="html-images">
+      <default>'html'</default>
+    </key>
+    <key type="s" name="html-indexes">
+      <default>'html'</default>
+    </key>
+    <key type="s" name="theme-files">
+      <default>'theme'</default>
+    </key>
+  </schema>
+
+</schemalist>

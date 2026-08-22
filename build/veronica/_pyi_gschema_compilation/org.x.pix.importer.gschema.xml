@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+     
+  <schema path="/org/x/pix/importer/" id="org.x.pix.importer">
+    <key type="s" name="destination">
+      <default>''</default>
+    </key>
+    <key name="subfolder-type" enum="org.x.pix.GthSubfolderType">
+      <default>'none'</default>
+    </key>
+    <key name="subfolder-format" enum="org.x.pix.GthSubfolderFormat">
+      <default>'yyyymmdd'</default>
+    </key>
+    <key type="b" name="subfolder-single">
+      <default>false</default>
+    </key>
+    <key type="s" name="subfolder-custom-format">
+      <default>''</default>
+    </key>
+    <key type="b" name="warn-delete-unsupported">
+      <default>true</default>
+    </key>
+  </schema>
+  
+</schemalist>

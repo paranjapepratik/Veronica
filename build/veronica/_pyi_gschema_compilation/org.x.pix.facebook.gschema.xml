@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  
+  <schema path="/org/x/pix/facebook/" id="org.x.pix.facebook">
+    <key type="i" name="max-resolution">
+      <default>2048</default>
+    </key>
+  </schema>
+
+</schemalist>

@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="stylesheet" href="industry.css"><style>body{margin:0;background:#f2f2f3;font-family:"Barlow",system-ui,sans-serif}a{color:#416180}a:hover{color:#5980a6}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(29,31,32,.16);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1d1f20;color:#f2f2f3;border-radius:0;text-decoration:none}.dv-tname{font:600 13px/1.2 "Barlow Condensed",system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#1d1f20}.dv-opts{display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(29,31,32,.09);color:#1d1f20;border-radius:0;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.3 "Barlow",system-ui,sans-serif;color:rgba(29,31,32,.55)}.dv-opt:target .dv-oid{background:#5980a6;color:#f2f2f3}.dv-next{margin:24px 0 0;font:12px/1.5 "Barlow",system-ui,sans-serif;color:rgba(29,31,32,.5)}</style></helmet>
+
+<section style="padding:44px 44px 34px;border-bottom:1px solid rgba(29,31,32,.16);max-width:1180px">
+<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:20px"><span class="dv-tid">brief</span><span class="dv-tname">Veronica v4 — what I read, what I think is wrong</span></div>
+<p style="margin:0 0 22px;max-width:74ch;font-size:15px;line-height:1.6;color:#2b2b2d">I read <code style="font:12px ui-monospace,Menlo,monospace;background:#e9e9ea;padding:1px 5px">veronica.py</code> (39&nbsp;KB, tkinter + Entrez + Ollama) and the README. Two problems are tangled together: the app <em>looks</em> dated, and the results are weak. The second one is not a UI problem — it's six specific things in the retrieval and scoring path. Designs below assume those get fixed, and the UI is built to <strong>show</strong> the fix (visible query, visible ranking reasons) rather than hide it.</p>
+
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 26px;margin-bottom:8px">
+<div class="blueprint" style="padding:16px 18px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="font:10px ui-monospace,Menlo,monospace;letter-spacing:.1em;color:#5980a6;margin-bottom:6px">BUG · MISSES PAPERS</div>
+<div style="font:600 17px/1.2 'Barlow Condensed',sans-serif;margin-bottom:6px">Fetch Limit does nothing</div>
+<p style="margin:0;font-size:13.5px;line-height:1.55;color:#424244"><code style="font:11.5px ui-monospace,monospace">_search_impl</code> calls <code style="font:11.5px ui-monospace,monospace">pubmed_search(..., max_results=show_n)</code> — <em>show_n</em>, not <em>fetch_n</em>. So "Fetch 200" still retrieves 10. Every review you run is a top-10 PubMed relevance list. This alone explains most missing papers.</p></div>
+
+<div class="blueprint" style="padding:16px 18px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="font:10px ui-monospace,Menlo,monospace;letter-spacing:.1em;color:#5980a6;margin-bottom:6px">BUG · MISSES PAPERS</div>
+<div style="font:600 17px/1.2 'Barlow Condensed',sans-serif;margin-bottom:6px">Silent full-text filter</div>
+<p style="margin:0;font-size:13.5px;line-height:1.55;color:#424244">Papers with no abstract <em>or</em> no PMC/DOI are dropped before you ever see them. Landmark older papers and many reviews vanish with no trace. Keep them, mark them <span class="tag tag-neutral">no full text</span>, let the researcher decide.</p></div>
+
+<div class="blueprint" style="padding:16px 18px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="font:10px ui-monospace,Menlo,monospace;letter-spacing:.1em;color:#5980a6;margin-bottom:6px">FIX · OFF-TOPIC HITS</div>
+<div style="font:600 17px/1.2 'Barlow Condensed',sans-serif;margin-bottom:6px">Build the query, don't pass the box</div>
+<p style="margin:0;font-size:13.5px;line-height:1.55;color:#424244">Right now your raw keyword string goes straight to Entrez. Expand each concept into a MeSH + <code style="font:11.5px ui-monospace,monospace">[tiab]</code> OR-group, AND the groups together — and print the generated query in the UI so it's inspectable and editable. That's the single biggest precision win.</p></div>
+
+<div class="blueprint" style="padding:16px 18px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="font:10px ui-monospace,Menlo,monospace;letter-spacing:.1em;color:#5980a6;margin-bottom:6px">FIX · ARBITRARY SCORES</div>
+<div style="font:600 17px/1.2 'Barlow Condensed',sans-serif;margin-bottom:6px">A rubric, not a vibe</div>
+<p style="margin:0;font-size:13.5px;line-height:1.55;color:#424244">One prompt asking for "1–10" on a 900-char abstract will never be stable. Score four named criteria 0–3 each — population, intervention/exposure, outcome, study design — each with a quoted span from the abstract as evidence. Sum = 0–12. Now the number is auditable and the "why" comes free.</p></div>
+
+<div class="blueprint" style="padding:16px 18px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="font:10px ui-monospace,Menlo,monospace;letter-spacing:.1em;color:#5980a6;margin-bottom:6px">FIX · TOO SLOW</div>
+<div style="font:600 17px/1.2 'Barlow Condensed',sans-serif;margin-bottom:6px">Cheap pre-rank, then spend the LLM</div>
+<p style="margin:0;font-size:13.5px;line-height:1.55;color:#424244">Retrieve 200, rank locally (BM25 or embeddings on title+abstract — milliseconds, no model), then send only the top 40 to Ollama across a 4-thread pool with <code style="font:11.5px ui-monospace,monospace">keep_alive</code> set. Serial 15–40&nbsp;s/paper becomes a couple of minutes for a real corpus.</p></div>
+
+<div class="blueprint" style="padding:16px 18px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="font:10px ui-monospace,Menlo,monospace;letter-spacing:.1em;color:#5980a6;margin-bottom:6px">FIX · PUBMED-ONLY</div>
+<div style="font:600 17px/1.2 'Barlow Condensed',sans-serif;margin-bottom:6px">Three more keyless sources</div>
+<p style="margin:0;font-size:13.5px;line-height:1.55;color:#424244">Europe PMC (preprints + full text), OpenAlex (citation counts — the README says PubMed can't give them; OpenAlex can, free), Crossref (DOI metadata). All keyless, all offline-friendly to cache. Dedupe on DOI, keep a source badge per row.</p></div>
+</div>
+<p class="dv-next">Below: three directions for the interface. Reference them by id in chat — e.g. "go deeper on <a class="dv-oid" href="#1c">1c</a>'s screening board, but with <a class="dv-oid" href="#1a">1a</a>'s query bar".</p>
+</section>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Three directions · desktop app, 1280×800 window</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Instrument panel — one interface, two themes. Flip Light / Dark in the title bar; Run review replays the scoring pass.</div>
+<div style="width:1280px;overflow:hidden;border:1px solid var(--v-line,rgba(29,31,32,.16));background:var(--v-bg,#f2f2f3);color:var(--v-text,#1d1f20);font-family:var(--v-body,'Barlow',sans-serif);box-shadow:var(--v-shadow,0 12px 32px rgba(43,43,45,.22));{{ themeVars }}">
+  <div style="display:flex;align-items:center;gap:10px;height:38px;padding:0 14px;background:var(--v-surface,#e9e9ea);border-bottom:1px solid var(--v-line,rgba(29,31,32,.16))">
+    <div style="display:flex;gap:7px"><span style="width:10px;height:10px;border:1px solid var(--v-mut,rgba(29,31,32,.55))"></span><span style="width:10px;height:10px;border:1px solid var(--v-mut,rgba(29,31,32,.55))"></span><span style="width:10px;height:10px;border:1px solid var(--v-mut,rgba(29,31,32,.55))"></span></div>
+    <div style="font-family:var(--v-head,'Barlow Condensed',sans-serif);font-weight:600;font-size:15px;letter-spacing:.06em;text-transform:uppercase;margin-left:8px;color:var(--v-accent,#5980a6)">Veronica</div>
+    <div style="font:11px ui-monospace,Menlo,monospace;color:var(--v-mut2,rgba(29,31,32,.5))">v4.0 · local</div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:14px;font:11px ui-monospace,Menlo,monospace;color:var(--v-mut,rgba(29,31,32,.55))">
+      <span>PubMed · EuropePMC · OpenAlex</span>
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;background:var(--v-accent,#5980a6)"></span>ollama llama3.1:8b</span>
+      <span style="display:flex;border:1px solid var(--v-line,rgba(29,31,32,.16))">
+        <button onClick="{{ setLight }}" style="border:0;cursor:pointer;font:10px ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:4px 10px;background:{{ lightBg }};color:{{ lightFg }}">LIGHT</button>
+        <button onClick="{{ setDark }}" style="border:0;border-left:1px solid var(--v-line,rgba(29,31,32,.16));cursor:pointer;font:10px ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:4px 10px;background:{{ darkBg }};color:{{ darkFg }}">DARK</button>
+      </span>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:stretch;border-bottom:1px solid var(--v-line,rgba(29,31,32,.16))">
+    <div style="flex:1;padding:16px 18px 14px">
+      <div style="font:10px ui-monospace,Menlo,monospace;letter-spacing:.1em;color:var(--v-mut2,rgba(29,31,32,.5));margin-bottom:7px">RESEARCH QUESTION — DRIVES BOTH RETRIEVAL AND SCORING</div>
+      <div style="display:flex;gap:10px;align-items:stretch">
+        <div style="flex:1;background:var(--v-surface,#e9e9ea);border:1px solid var(--v-line,rgba(29,31,32,.16));padding:9px 12px;font-size:15px;line-height:1.45">Which mouse models are used to study mild cognitive impairment in Alzheimer's disease?<span style="display:inline-block;width:1px;height:16px;background:var(--v-accent,#5980a6);vertical-align:-3px;margin-left:2px"></span></div>
+        <button onClick="{{ run }}" style="min-width:150px;cursor:pointer;border:1px solid var(--v-accent,#5980a6);background:var(--v-accent,#5980a6);color:var(--v-on,#f2f2f3);font-family:var(--v-head,'Barlow Condensed',sans-serif);font-weight:600;font-size:15px;letter-spacing:.06em;text-transform:uppercase">{{ runLabel }}</button>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-top:12px">
+        <div style="font:10px ui-monospace,Menlo,monospace;letter-spacing:.1em;color:var(--v-accent,#5980a6);padding-top:4px;white-space:nowrap">QUERY SENT →</div>
+        <div style="flex:1;font:11.5px/1.55 ui-monospace,Menlo,monospace;color:var(--v-text,#1d1f20);background:var(--v-soft,rgba(89,128,166,.07));border-left:2px solid var(--v-accent,#5980a6);padding:6px 10px">("Alzheimer Disease"[MeSH] OR alzheimer*[tiab]) AND ("Cognitive Dysfunction"[MeSH] OR "mild cognitive impairment"[tiab] OR MCI[tiab]) AND (mice[MeSH] OR "mouse model*"[tiab] OR transgenic[tiab])<span style="color:var(--v-mut2,rgba(29,31,32,.5))"> AND 2015:3000[pdat]</span>&nbsp; <a href="#1a" style="color:var(--v-accent,#5980a6)">edit</a></div>
+      </div>
+    </div>
+    <div style="width:250px;border-left:1px solid var(--v-line,rgba(29,31,32,.16));padding:16px 18px;display:flex;flex-direction:column;gap:11px">
+      <div style="font:10px ui-monospace,Menlo,monospace;letter-spacing:.1em;color:var(--v-mut2,rgba(29,31,32,.5))">RETRIEVAL BUDGET</div>
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--v-mut,rgba(29,31,32,.55))">Retrieve</span><span style="font:600 13px ui-monospace,monospace">200</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--v-mut,rgba(29,31,32,.55))">Pre-rank keep</span><span style="font:600 13px ui-monospace,monospace">40</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--v-mut,rgba(29,31,32,.55))">Min year</span><span style="font:600 13px ui-monospace,monospace">2015</span></div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--v-mut,rgba(29,31,32,.55));cursor:pointer"><span style="width:14px;height:14px;border:1px solid var(--v-accent,#5980a6);background:var(--v-accent,#5980a6);display:grid;place-items:center;color:var(--v-on,#f2f2f3);font-size:10px;line-height:1">✓</span>Include no-full-text</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--v-mut,rgba(29,31,32,.55));cursor:pointer"><span style="width:14px;height:14px;border:1px solid var(--v-accent,#5980a6);background:var(--v-accent,#5980a6);display:grid;place-items:center;color:var(--v-on,#f2f2f3);font-size:10px;line-height:1">✓</span>Fetch open-access PDFs</label>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:14px;padding:9px 18px;background:var(--v-surface,#e9e9ea);border-bottom:1px solid var(--v-line,rgba(29,31,32,.16));font:11px ui-monospace,Menlo,monospace;color:var(--v-mut,rgba(29,31,32,.55))">
+    <span style="color:var(--v-text,#1d1f20)">{{ statusLine }}</span>
+    <div style="flex:1;height:4px;background:var(--v-line,rgba(29,31,32,.16))"><div style="height:100%;background:var(--v-accent,#5980a6);width:{{ progressPct }}"></div></div>
+    <span>{{ elapsed }}</span>
+  </div>
+
+  <div style="display:flex;height:620px">
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;border-right:1px solid var(--v-line,rgba(29,31,32,.16))">
+      <div style="display:grid;grid-template-columns:74px 1fr 118px 58px 96px;gap:10px;padding:8px 18px;font:10px ui-monospace,Menlo,monospace;letter-spacing:.09em;color:var(--v-mut,rgba(29,31,32,.55));border-bottom:1px solid var(--v-line,rgba(29,31,32,.16))">
+        <span>SCORE /12</span><span>TITLE</span><span>JOURNAL</span><span>YEAR</span><span>SOURCE</span>
+      </div>
+      <div style="flex:1;overflow:auto">
+        <sc-for list="{{ rows }}" as="p" hint-placeholder-count="8">
+          <div onClick="{{ p.select }}" style="display:grid;grid-template-columns:74px 1fr 118px 58px 96px;gap:10px;padding:11px 18px;border-bottom:1px solid var(--v-line2,rgba(29,31,32,.08));cursor:pointer;align-items:start;background:{{ p.bg }}" style-hover="background:var(--v-sel,rgba(89,128,166,.14))">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span style="font:600 15px ui-monospace,Menlo,monospace;color:{{ p.scoreColor }}">{{ p.score }}</span>
+              <span style="display:flex;gap:2px"><sc-for list="{{ p.bars }}" as="b" hint-placeholder-count="4"><span style="width:4px;height:14px;background:{{ b.fill }}"></span></sc-for></span>
+            </div>
+            <div style="min-width:0">
+              <div style="font-size:14px;line-height:1.35">{{ p.title }}</div>
+              <div style="font:11px ui-monospace,Menlo,monospace;color:var(--v-mut2,rgba(29,31,32,.5));margin-top:3px">{{ p.why }}</div>
+            </div>
+            <div style="font-size:12px;color:var(--v-mut,rgba(29,31,32,.55));line-height:1.35">{{ p.journal }}</div>
+            <div style="font:12px ui-monospace,monospace;color:var(--v-mut,rgba(29,31,32,.55))">{{ p.year }}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px"><span style="font:10px ui-monospace,monospace;padding:2px 6px;background:var(--v-soft,rgba(89,128,166,.07));color:var(--v-accent,#5980a6)">{{ p.source }}</span><span style="font:10px ui-monospace,monospace;padding:2px 6px;border:1px solid var(--v-line,rgba(29,31,32,.16));color:var(--v-mut,rgba(29,31,32,.55))">{{ p.pdf }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding:9px 18px;border-top:1px solid var(--v-line,rgba(29,31,32,.16));font:11px ui-monospace,Menlo,monospace;color:var(--v-mut2,rgba(29,31,32,.5))">32 more scored papers · 108 retrieved but not scored</div>
+    </div>
+
+    <div style="width:372px;display:flex;flex-direction:column;background:var(--v-surface,#e9e9ea);overflow:auto">
+      <div style="padding:16px 18px 14px;border-bottom:1px solid var(--v-line,rgba(29,31,32,.16))">
+        <div style="font:10px ui-monospace,Menlo,monospace;letter-spacing:.1em;color:var(--v-mut2,rgba(29,31,32,.5));margin-bottom:8px">WHY THIS SCORE</div>
+        <div style="font-family:var(--v-head,'Barlow Condensed',sans-serif);font-weight:600;font-size:19px;line-height:1.25;margin-bottom:4px">{{ sel.title }}</div>
+        <div style="font:11px ui-monospace,Menlo,monospace;color:var(--v-mut,rgba(29,31,32,.55))">{{ sel.meta }}</div>
+      </div>
+      <div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid var(--v-line,rgba(29,31,32,.16))">
+        <sc-for list="{{ sel.criteria }}" as="c" hint-placeholder-count="4">
+          <div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px">
+              <span style="font:10px ui-monospace,Menlo,monospace;letter-spacing:.09em;color:var(--v-mut,rgba(29,31,32,.55));width:112px">{{ c.name }}</span>
+              <span style="display:flex;gap:2px"><sc-for list="{{ c.bars }}" as="b" hint-placeholder-count="3"><span style="width:16px;height:5px;background:{{ b.fill }}"></span></sc-for></span>
+              <span style="font:600 11px ui-monospace,monospace;color:var(--v-accent,#5980a6)">{{ c.val }}</span>
+            </div>
+            <sc-if value="{{ c.showEv }}" hint-placeholder-val="{{ true }}"><div style="font-size:12.5px;line-height:1.5;color:var(--v-quote,#424244);border-left:2px solid var(--v-accent,#5980a6);padding-left:8px">“{{ c.evidence }}”</div></sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding:14px 18px;flex:1">
+        <div style="font:10px ui-monospace,Menlo,monospace;letter-spacing:.1em;color:var(--v-mut2,rgba(29,31,32,.5));margin-bottom:6px">SUMMARY</div>
+        <p style="margin:0;font-size:13.5px;line-height:1.6;color:var(--v-quote,#424244)">{{ sel.summary }}</p>
+      </div>
+      <div style="display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--v-line,rgba(29,31,32,.16))">
+        <button style="flex:1;cursor:pointer;padding:7px;border:1px solid var(--v-accent,#5980a6);background:var(--v-accent,#5980a6);color:var(--v-on,#f2f2f3);font:11px ui-monospace,monospace;letter-spacing:.06em">OPEN PDF</button>
+        <button style="flex:1;cursor:pointer;padding:7px;border:1px solid var(--v-line,rgba(29,31,32,.16));background:transparent;color:var(--v-text,#1d1f20);font:11px ui-monospace,monospace;letter-spacing:.06em">INCLUDE</button>
+        <button style="flex:1;cursor:pointer;padding:7px;border:1px solid var(--v-line,rgba(29,31,32,.16));background:transparent;color:var(--v-text,#1d1f20);font:11px ui-monospace,monospace;letter-spacing:.06em">EXCLUDE</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Dark instrument — your existing gold-on-black DNA kept, restructured. Log promoted to a live activity spine instead of a hidden tab.</div>
+<div style="width:1280px;overflow:hidden;background:#0f0f0f;box-shadow:0 12px 32px rgba(0,0,0,.4);border:1px solid #2a2a2a">
+  <div style="display:flex;align-items:center;gap:14px;height:40px;padding:0 16px;background:#181818;border-bottom:1px solid #2a2a2a">
+    <div style="font:22px Georgia,serif;color:#c4a96a;line-height:1">Veronica</div>
+    <div style="font:13px Georgia,serif;color:#999990">AI Literature Review</div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:18px;font:11px ui-monospace,Menlo,monospace;color:#555550">
+      <span>3 sources · 200 retrieved · 40 scored</span>
+      <span style="color:#5aaa5a">● ollama ready</span>
+    </div>
+  </div>
+  <div style="display:flex;height:720px">
+    <div style="width:300px;background:#181818;border-right:1px solid #2a2a2a;padding:16px;display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="font:8px ui-monospace,monospace;letter-spacing:.14em;color:#555550;margin-bottom:6px">── QUESTION ──────────────</div>
+        <div style="background:#222;border:1px solid #2a2a2a;padding:9px 11px;font:13px/1.5 Georgia,serif;color:#e8e4dc">Which mouse models are used to study mild cognitive impairment in Alzheimer's disease?</div>
+      </div>
+      <div>
+        <div style="font:8px ui-monospace,monospace;letter-spacing:.14em;color:#555550;margin-bottom:6px">── CONCEPT BLOCKS ────────</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="border:1px solid #2a2a2a;padding:7px 9px"><div style="font:11px ui-monospace,monospace;color:#c4a96a">alzheimer disease</div><div style="font:10px ui-monospace,monospace;color:#555550;margin-top:2px">MeSH + 3 synonyms · 41k hits</div></div>
+          <div style="border:1px solid #2a2a2a;padding:7px 9px"><div style="font:11px ui-monospace,monospace;color:#c4a96a">mild cognitive impairment</div><div style="font:10px ui-monospace,monospace;color:#555550;margin-top:2px">MeSH + MCI · 12k hits</div></div>
+          <div style="border:1px solid #2a2a2a;padding:7px 9px"><div style="font:11px ui-monospace,monospace;color:#c4a96a">mouse model</div><div style="font:10px ui-monospace,monospace;color:#555550;margin-top:2px">MeSH + transgenic · 8k hits</div></div>
+          <div style="border:1px dashed #2a2a2a;padding:7px 9px;font:11px ui-monospace,monospace;color:#555550;text-align:center">+ add concept</div>
+        </div>
+      </div>
+      <div>
+        <div style="font:8px ui-monospace,monospace;letter-spacing:.14em;color:#555550;margin-bottom:6px">── SOURCES ───────────────</div>
+        <div style="display:flex;flex-direction:column;gap:5px;font:11px ui-monospace,monospace;color:#999990">
+          <span style="display:flex;justify-content:space-between"><span style="color:#c4a96a">✓ PubMed</span><span style="color:#555550">142</span></span>
+          <span style="display:flex;justify-content:space-between"><span style="color:#c4a96a">✓ Europe PMC</span><span style="color:#555550">51</span></span>
+          <span style="display:flex;justify-content:space-between"><span style="color:#c4a96a">✓ OpenAlex</span><span style="color:#555550">7</span></span>
+          <span style="display:flex;justify-content:space-between"><span>· Crossref</span><span style="color:#555550">off</span></span>
+        </div>
+      </div>
+      <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px">
+        <div style="background:#c4a96a;color:#0e0e0e;text-align:center;padding:11px;font:12px ui-monospace,monospace;font-weight:700;letter-spacing:.08em;cursor:pointer">SEARCH &amp; ANALYZE</div>
+        <div style="border:1px solid #2a2a2a;color:#999990;text-align:center;padding:7px;font:11px ui-monospace,monospace;cursor:pointer">Open output folder</div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <div style="display:grid;grid-template-columns:96px 1fr 130px 54px;gap:10px;padding:9px 16px;background:#222;font:8.5px ui-monospace,monospace;letter-spacing:.12em;color:#c4a96a">
+        <span>SCORE</span><span>TITLE</span><span>JOURNAL</span><span>YEAR</span>
+      </div>
+      <div style="flex:1;overflow:auto">
+        <sc-for list="{{ darkRows }}" as="p" hint-placeholder-count="8">
+          <div onClick="{{ p.select }}" style="display:grid;grid-template-columns:96px 1fr 130px 54px;gap:10px;padding:10px 16px;border-bottom:1px solid #1c1c1c;cursor:pointer;background:{{ p.bg }}" style-hover="background:#1a1a12">
+            <div style="display:flex;align-items:center;gap:6px"><span style="font:700 14px ui-monospace,monospace;color:{{ p.scoreColor }}">{{ p.score }}</span><span style="display:flex;gap:2px"><sc-for list="{{ p.bars }}" as="b" hint-placeholder-count="4"><span style="width:5px;height:12px;background:{{ b.fillDark }}"></span></sc-for></span></div>
+            <div style="min-width:0"><div style="font:13.5px/1.35 Georgia,serif;color:#e8e4dc">{{ p.title }}</div><div style="font:10px ui-monospace,monospace;color:#555550;margin-top:3px">{{ p.why }}</div></div>
+            <div style="font:11px ui-monospace,monospace;color:#999990">{{ p.journal }}</div>
+            <div style="font:11px ui-monospace,monospace;color:#999990">{{ p.year }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="height:150px;border-top:1px solid #2a2a2a;background:#0b0b0b;padding:10px 16px;overflow:hidden">
+        <div style="font:8px ui-monospace,monospace;letter-spacing:.14em;color:#555550;margin-bottom:6px">── ACTIVITY ──────────────────────────────────────────</div>
+        <div style="font:11px/1.7 ui-monospace,Menlo,monospace">
+          <div style="color:#6a8ec4">[14:02:11] Built query from 3 concept blocks → 200 records</div>
+          <div style="color:#999990">[14:02:14] Pre-rank (BM25, local) → kept top 40 · 0.4 s</div>
+          <div style="color:#5aaa5a">[14:02:52] ✓ 12/12 Sun et&nbsp;al. — 3xTg-AD longitudinal · 11/12</div>
+          <div style="color:#c46a6a">[14:03:04] ✗ PDF paywalled — DOI kept, abstract scored</div>
+          <div style="color:#c4a96a">[14:03:05] 40/40 scored · Papers.xlsx + Summaries.xlsx saved</div>
+        </div>
+      </div>
+    </div>
+    <div style="width:300px;background:#181818;border-left:1px solid #2a2a2a;padding:16px;display:flex;flex-direction:column;gap:13px;overflow:auto">
+      <div style="font:8px ui-monospace,monospace;letter-spacing:.14em;color:#555550">── SCORE BREAKDOWN ───────</div>
+      <div style="font:16px/1.3 Georgia,serif;color:#e8e4dc">{{ darkSel.title }}</div>
+      <div style="font:10px ui-monospace,monospace;color:#555550">{{ darkSel.meta }}</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{ darkSel.criteria }}" as="c" hint-placeholder-count="4">
+          <div>
+            <div style="display:flex;align-items:center;gap:7px"><span style="font:9px ui-monospace,monospace;letter-spacing:.1em;color:#999990;width:96px">{{ c.name }}</span><span style="display:flex;gap:2px"><sc-for list="{{ c.bars }}" as="b" hint-placeholder-count="3"><span style="width:14px;height:4px;background:{{ b.fillDark }}"></span></sc-for></span><span style="font:700 10px ui-monospace,monospace;color:#c4a96a">{{ c.val }}</span></div>
+            <sc-if value="{{ c.showEv }}" hint-placeholder-val="{{ true }}"><div style="font:11.5px/1.5 Georgia,serif;color:#999990;border-left:1px solid #7a6540;padding-left:7px;margin-top:3px">“{{ c.evidence }}”</div></sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <div style="margin-top:auto;display:flex;gap:6px">
+        <div style="flex:1;border:1px solid #2a2a2a;color:#c4a96a;text-align:center;padding:7px;font:10px ui-monospace,monospace;cursor:pointer">PDF</div>
+        <div style="flex:1;border:1px solid #2a2a2a;color:#5aaa5a;text-align:center;padding:7px;font:10px ui-monospace,monospace;cursor:pointer">INCLUDE</div>
+        <div style="flex:1;border:1px solid #2a2a2a;color:#c46a6a;text-align:center;padding:7px;font:10px ui-monospace,monospace;cursor:pointer">EXCLUDE</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Screening board — the review as a PRISMA funnel. Themes cluster on the left; click a card's ✓/✗ to triage, and the funnel updates.</div>
+<div style="width:1280px;overflow:hidden;background:#f2f2f3;box-shadow:0 12px 32px rgba(43,43,45,.22);border:1px solid rgba(29,31,32,.16)">
+  <div style="display:flex;align-items:center;gap:16px;height:38px;padding:0 14px;background:#e9e9ea;border-bottom:1px solid rgba(29,31,32,.16)">
+    <div style="font:600 13px 'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase">Veronica</div>
+    <div style="display:flex;gap:2px;margin-left:8px">
+      <span style="padding:4px 12px;font:11px ui-monospace,monospace;color:rgba(29,31,32,.55)">Search</span>
+      <span style="padding:4px 12px;font:11px ui-monospace,monospace;background:#f2f2f3;border:1px solid rgba(29,31,32,.16);border-bottom-color:#f2f2f3;color:#1d1f20">Screen</span>
+      <span style="padding:4px 12px;font:11px ui-monospace,monospace;color:rgba(29,31,32,.55)">Synthesise</span>
+      <span style="padding:4px 12px;font:11px ui-monospace,monospace;color:rgba(29,31,32,.55)">Export</span>
+    </div>
+    <div style="margin-left:auto;font:11px ui-monospace,monospace;color:rgba(29,31,32,.55)">alzheimer · MCI · mouse model — 2026-08-21</div>
+  </div>
+  <div style="display:flex;height:640px">
+    <div style="width:284px;border-right:1px solid rgba(29,31,32,.16);padding:16px 18px;display:flex;flex-direction:column;gap:18px">
+      <div>
+        <div style="font:10px ui-monospace,monospace;letter-spacing:.1em;color:rgba(29,31,32,.5);margin-bottom:10px">FUNNEL</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="display:flex;align-items:center;gap:9px"><div style="height:22px;width:100%;background:rgba(89,128,166,.18);display:flex;align-items:center;padding-left:8px;font:11px ui-monospace,monospace;color:#2c455d">retrieved 200</div></div>
+          <div style="display:flex;align-items:center;gap:9px"><div style="height:22px;width:74%;background:rgba(89,128,166,.3);display:flex;align-items:center;padding-left:8px;font:11px ui-monospace,monospace;color:#2c455d">deduped 148</div></div>
+          <div style="display:flex;align-items:center;gap:9px"><div style="height:22px;width:52%;background:rgba(89,128,166,.45);display:flex;align-items:center;padding-left:8px;font:11px ui-monospace,monospace;color:#1d2d3d">scored 40</div></div>
+          <div style="display:flex;align-items:center;gap:9px"><div style="height:22px;width:{{ funnelIncW }};min-width:96px;background:#5980a6;display:flex;align-items:center;padding-left:8px;font:11px ui-monospace,monospace;color:#f2f2f3">included {{ nIncluded }}</div></div>
+          <div style="display:flex;align-items:center;gap:9px"><div style="height:22px;width:{{ funnelExcW }};min-width:96px;background:rgba(29,31,32,.2);display:flex;align-items:center;padding-left:8px;font:11px ui-monospace,monospace;color:#424244">excluded {{ nExcluded }}</div></div>
+        </div>
+      </div>
+      <div>
+        <div style="font:10px ui-monospace,monospace;letter-spacing:.1em;color:rgba(29,31,32,.5);margin-bottom:10px">THEMES — CLUSTERED FROM ABSTRACTS</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ themes }}" as="t" hint-placeholder-count="5">
+            <div onClick="{{ t.pick }}" class="blueprint" style="padding:8px 10px;cursor:pointer;background:{{ t.bg }}" style-hover="background:rgba(89,128,166,.08)">
+              <i class="corner tl"></i><i class="corner br"></i>
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 13px 'Barlow Condensed',sans-serif;letter-spacing:.02em">{{ t.name }}</span><span style="font:11px ui-monospace,monospace;color:rgba(29,31,32,.5)">{{ t.n }}</span></div>
+              <div style="display:flex;gap:2px;margin-top:5px"><sc-for list="{{ t.dots }}" as="d" hint-placeholder-count="6"><span style="width:6px;height:6px;background:{{ d.fill }}"></span></sc-for></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="margin-top:auto;font:11px/1.6 ui-monospace,monospace;color:rgba(29,31,32,.45)">
+        <div>J / K — next, previous</div>
+        <div>I — include · X — exclude</div>
+        <div>Space — open PDF</div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid rgba(29,31,32,.16)">
+        <div style="font:600 15px 'Barlow Condensed',sans-serif;letter-spacing:.04em;text-transform:uppercase">{{ themeTitle }}</div>
+        <div style="font:11px ui-monospace,monospace;color:rgba(29,31,32,.5)">{{ queueLine }}</div>
+        <div style="margin-left:auto;display:flex;gap:8px"><button class="btn btn-secondary" style="font-size:12px">Sort: score</button><button class="btn btn-primary" style="font-size:12px">Draft review from {{ nIncluded }} included</button></div>
+      </div>
+      <div style="flex:1;overflow:auto;padding:16px 18px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-content:start">
+        <sc-for list="{{ cards }}" as="p" hint-placeholder-count="6">
+          <div class="blueprint" style="padding:14px 16px;display:flex;flex-direction:column;gap:9px;background:{{ p.cardBg }}">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="display:flex;align-items:baseline;gap:10px">
+              <span style="font:700 17px ui-monospace,monospace;color:{{ p.scoreColor }}">{{ p.score }}</span>
+              <span style="font:10px ui-monospace,monospace;color:rgba(29,31,32,.45)">/12</span>
+              <span style="margin-left:auto;font:10px ui-monospace,monospace;color:rgba(29,31,32,.5)">{{ p.status }}</span>
+            </div>
+            <div style="font:600 16px/1.25 'Barlow Condensed',sans-serif">{{ p.title }}</div>
+            <div style="font:11px ui-monospace,monospace;color:rgba(29,31,32,.5)">{{ p.meta }}</div>
+            <p style="margin:0;font-size:12.5px;line-height:1.55;color:#424244">{{ p.summary }}</p>
+            <div style="display:flex;gap:5px;flex-wrap:wrap"><sc-for list="{{ p.chips }}" as="c" hint-placeholder-count="3"><span class="tag tag-accent" style="font-size:10px;padding:2px 7px">{{ c.label }}</span></sc-for></div>
+            <div style="display:flex;gap:7px;margin-top:2px">
+              <button onClick="{{ p.include }}" class="btn btn-secondary" style="flex:1;font-size:12px">✓ Include</button>
+              <button onClick="{{ p.exclude }}" class="btn btn-secondary" style="flex:1;font-size:12px">✗ Exclude</button>
+              <button class="btn btn-ghost" style="font-size:12px">PDF</button>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "build out <a class="dv-oid" href="#1a">1a</a>'s query editor and the export screen" · "make <a class="dv-oid" href="#1b">1b</a> the main direction, but with <a class="dv-oid" href="#1c">1c</a>'s funnel" · "show me the synthesis / drafted-review screen"</p>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#5980a6&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#5980a6&quot;,&quot;#6b7a5a&quot;,&quot;#a6743f&quot;,&quot;#1d2d3d&quot;],&quot;section&quot;:&quot;Look&quot;},&quot;showEvidence&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Scoring&quot;}}">
+const PAPERS = [
+  {id:"p1",score:11,title:"Longitudinal cognitive decline in 3xTg-AD mice tracks tau burden before plaque onset",journal:"Neurobiol Aging",year:"2023",source:"PubMed",pdf:"PDF",why:"population ✓ · design ✓ · outcome ✓",theme:"Transgenic models",
+   meta:"Sun et al. · Neurobiol Aging 2023 · PMID 36842119 · 84 cites (OpenAlex)",
+   summary:"Follows 3xTg-AD mice from 4 to 18 months with monthly Barnes-maze testing, then correlates performance with post-mortem tau and amyloid load. Cognitive impairment appears at 6 months, months before plaque deposition — the authors argue the model's MCI-equivalent window is 6–9 months.",
+   criteria:[["POPULATION",3,"3xTg-AD transgenic mice, n=48, both sexes"],["INTERVENTION",2,"no intervention — natural-history design"],["OUTCOME",3,"Barnes maze and novel-object recognition at monthly intervals"],["DESIGN",3,"longitudinal cohort with post-mortem histology"]],
+   chips:["3xTg-AD","longitudinal","behavioural"]},
+  {id:"p2",score:10,title:"5xFAD mice as a model of prodromal Alzheimer's: a systematic comparison of behavioural batteries",journal:"Front Neurosci",year:"2022",source:"EuropePMC",pdf:"PDF",why:"population ✓ · design ✓ · outcome ~",theme:"Transgenic models",
+   meta:"Ibarra et al. · Front Neurosci 2022 · PMID 35145367 · 61 cites",
+   summary:"Compares six behavioural test batteries across 5xFAD, APP/PS1 and wild-type cohorts, and reports which tests detect impairment earliest. Novel-object recognition is the most sensitive at 4 months; Morris water maze only separates groups after 8.",
+   criteria:[["POPULATION",3,"5xFAD and APP/PS1 lines against WT controls"],["INTERVENTION",2,"test batteries compared, no drug arm"],["OUTCOME",3,"six behavioural assays scored for sensitivity"],["DESIGN",2,"systematic comparison, single site"]],
+   chips:["5xFAD","APP/PS1","methods"]},
+  {id:"p3",score:9,title:"Comparing APP/PS1 and knock-in APP-NL-G-F models for early memory deficits",journal:"J Neurosci",year:"2021",source:"PubMed",pdf:"PDF",why:"population ✓ · outcome ✓ · design ~",theme:"Knock-in models",
+   meta:"Okada et al. · J Neurosci 2021 · PMID 33947722 · 137 cites",
+   summary:"Head-to-head comparison of an overexpression line and a knock-in line. The knock-in shows slower, more human-like progression, which the authors argue makes it a better MCI analogue despite the longer experimental timeline.",
+   criteria:[["POPULATION",3,"APP/PS1 and APP-NL-G-F knock-in, n=72"],["INTERVENTION",2,"model comparison"],["OUTCOME",3,"spatial and recognition memory at 4 timepoints"],["DESIGN",1,"cross-sectional at each age, not longitudinal"]],
+   chips:["knock-in","NL-G-F","comparison"]},
+  {id:"p4",score:8,title:"Environmental enrichment delays MCI-like deficits in TgF344-AD rats — implications for mouse protocols",journal:"Behav Brain Res",year:"2024",source:"PubMed",pdf:"no PDF",why:"outcome ✓ · population ~ (rat)",theme:"Interventions",
+   meta:"Vermeulen et al. · Behav Brain Res 2024 · PMID 38221473 · 19 cites",
+   summary:"Rat, not mouse — included because the enrichment protocol is the one most often ported to mouse work. Enrichment from 3 months delays the onset of recognition-memory deficits by roughly 4 months.",
+   criteria:[["POPULATION",1,"TgF344-AD rats — species mismatch"],["INTERVENTION",3,"environmental enrichment from 3 months"],["OUTCOME",3,"novel-object recognition, longitudinal"],["DESIGN",1,"randomised but rat model"]],
+   chips:["enrichment","rat","translational"]},
+  {id:"p5",score:7,title:"Touchscreen paradigms for translational assessment of cognition in AD mouse models",journal:"Neuropharmacology",year:"2020",source:"EuropePMC",pdf:"PDF",why:"outcome ✓ · design ~ · methods paper",theme:"Behavioural assays",
+   meta:"Lund et al. · Neuropharmacology 2020 · PMID 32294462 · 210 cites",
+   summary:"Methods review of touchscreen-based cognitive testing, arguing it maps more directly onto human CANTAB batteries than maze tasks. Useful for protocol design rather than for model selection.",
+   criteria:[["POPULATION",2,"multiple lines discussed, none primary"],["INTERVENTION",2,"assay methodology"],["OUTCOME",3,"touchscreen task battery detail"],["DESIGN",0,"narrative review, no new data"]],
+   chips:["touchscreen","methods","review"]},
+  {id:"p6",score:6,title:"Sex differences in amyloid pathology across four transgenic mouse lines",journal:"Alzheimers Res Ther",year:"2023",source:"OpenAlex",pdf:"PDF",why:"population ✓ · outcome ~ (pathology only)",theme:"Pathology",
+   meta:"Adeyemi et al. · Alzheimers Res Ther 2023 · PMID 37231190 · 44 cites",
+   summary:"Quantifies plaque load by sex across 3xTg-AD, 5xFAD, APP/PS1 and NL-G-F. Females show earlier and heavier deposition in three of four lines. No cognitive outcomes, so relevance to the MCI question is indirect.",
+   criteria:[["POPULATION",3,"four transgenic lines, both sexes"],["INTERVENTION",1,"observational"],["OUTCOME",1,"histopathology only, no cognition"],["DESIGN",1,"cross-sectional"]],
+   chips:["sex differences","pathology"]},
+  {id:"p7",score:5,title:"Gut microbiome composition correlates with cognitive scores in APP/PS1 mice",journal:"Sci Rep",year:"2022",source:"EuropePMC",pdf:"PDF",why:"population ✓ · outcome ~ · off-axis",theme:"Pathology",
+   meta:"Zhao et al. · Sci Rep 2022 · PMID 35618755 · 31 cites",
+   summary:"Correlational study linking microbiome diversity to Morris water maze performance. On-model but tangential to model selection for MCI.",
+   criteria:[["POPULATION",3,"APP/PS1 mice, n=30"],["INTERVENTION",0,"none"],["OUTCOME",2,"water maze plus 16S sequencing"],["DESIGN",0,"correlational"]],
+   chips:["microbiome","correlational"]},
+  {id:"p8",score:3,title:"Deep-learning segmentation of murine hippocampal subfields from ex vivo MRI",journal:"Neuroimage",year:"2024",source:"OpenAlex",pdf:"no PDF",why:"design ✓ · question mismatch",theme:"Behavioural assays",
+   meta:"Petrov et al. · Neuroimage 2024 · PMID 38401229 · 8 cites",
+   summary:"An imaging-methods paper. Retrieved because of MeSH overlap on 'mice' and 'hippocampus'; kept visible so you can see what the query is pulling in and tighten it.",
+   criteria:[["POPULATION",1,"mouse brains, strain not central"],["INTERVENTION",0,"none"],["OUTCOME",0,"segmentation accuracy, not cognition"],["DESIGN",2,"validated method, held-out set"]],
+   chips:["imaging","methods"]}
+];
+
+const THEMES = [
+  {name:"Transgenic models", n:14},
+  {name:"Knock-in models", n:8},
+  {name:"Behavioural assays", n:9},
+  {name:"Interventions", n:6},
+  {name:"Pathology", n:3}
+];
+
+class Component extends DCLogic {
+  state = {phase:"done", progress:100, elapsed:"2 m 41 s", selId:"p1", darkSelId:"p2", theme:"Transgenic models", decisions:{p2:"in"}, revealed:8, mode:"light"};
+
+  static THEMES = {
+    light: "--v-bg:#f2f2f3;--v-surface:#e9e9ea;--v-line:rgba(29,31,32,.16);--v-line2:rgba(29,31,32,.08);--v-text:#1d1f20;--v-mut:rgba(29,31,32,.55);--v-mut2:rgba(29,31,32,.5);--v-accent:#5980a6;--v-soft:rgba(89,128,166,.09);--v-sel:rgba(89,128,166,.14);--v-on:#f2f2f3;--v-quote:#424244;--v-head:'Barlow Condensed',sans-serif;--v-body:'Barlow',sans-serif;--v-shadow:0 12px 32px rgba(43,43,45,.22)",
+    dark:  "--v-bg:#0f0f0f;--v-surface:#181818;--v-line:#2a2a2a;--v-line2:#1c1c1c;--v-text:#e8e4dc;--v-mut:#999990;--v-mut2:#555550;--v-accent:#c4a96a;--v-soft:rgba(196,169,106,.08);--v-sel:#1a1a12;--v-on:#0e0e0e;--v-quote:#999990;--v-head:Georgia,serif;--v-body:Georgia,serif;--v-shadow:0 12px 32px rgba(0,0,0,.45)"
+  };
+
+  componentWillUnmount(){ clearInterval(this._t); }
+
+  run = () => {
+    clearInterval(this._t);
+    if (this.state.phase === "running") { this.setState({phase:"done", progress:100, elapsed:"2 m 41 s", revealed:8}); return; }
+    this.setState({phase:"running", progress:0, revealed:0, elapsed:"0 s"});
+    let tick = 0;
+    this._t = setInterval(() => {
+      tick += 1;
+      const pct = Math.min(100, tick * 4);
+      const rev = Math.min(PAPERS.length, Math.floor(pct / 12));
+      this.setState({progress:pct, revealed:rev, elapsed:(tick*1.7).toFixed(0)+" s"});
+      if (pct >= 100) { clearInterval(this._t); this.setState({phase:"done", elapsed:"2 m 41 s", revealed:8}); }
+    }, 90);
+  };
+
+  scoreColor(s, dark){
+    if (dark) return s >= 9 ? "#c4a96a" : s >= 6 ? "#aabbdd" : "#888880";
+    return s >= 9 ? "#2c455d" : s >= 6 ? "#597ea3" : "#7a7a7d";
+  }
+  bars(score, max, size, dark){
+    const filled = Math.round((score / max) * size);
+    const accent = dark ? "#c4a96a" : (this.props.accent ?? "#5980a6");
+    return Array.from({length:size}, (_, i) => ({
+      fill: i < filled ? accent : (dark ? "#2a2a2a" : "rgba(29,31,32,.14)"),
+      fillDark: i < filled ? "#c4a96a" : "#2a2a2a"
+    }));
+  }
+
+  renderVals(){
+    const st = this.state;
+    const dark = st.mode === "dark";
+    const list = st.phase === "running" ? PAPERS.slice(0, st.revealed) : PAPERS;
+
+    const rows = list.map(p => ({
+      title:p.title, journal:p.journal, year:p.year, source:p.source, pdf:p.pdf, why:p.why,
+      score:p.score, scoreColor:this.scoreColor(p.score, dark),
+      bars:this.bars(p.score, 12, 4, dark),
+      bg: st.selId === p.id ? (dark ? "#1a1a12" : "rgba(89,128,166,.14)") : "transparent",
+      select: () => this.setState({selId:p.id})
+    }));
+
+    const darkRows = PAPERS.map(p => ({
+      title:p.title, journal:p.journal, year:p.year, why:p.why,
+      score:p.score, scoreColor:this.scoreColor(p.score, true),
+      bars:this.bars(p.score, 12, 4, true),
+      bg: st.darkSelId === p.id ? "#1a1a12" : "transparent",
+      select: () => this.setState({darkSelId:p.id})
+    }));
+
+    const mk = (id, dk) => {
+      const p = PAPERS.find(x => x.id === id) || PAPERS[0];
+      const showEv = this.props.showEvidence ?? true;
+      return {title:p.title, meta:p.meta, summary:p.summary,
+        criteria:p.criteria.map(([name, val, evidence]) => ({name, val:val+"/3", showEv, evidence, bars:this.bars(val, 3, 3, dk)}))};
+    };
+
+    const decided = Object.entries(st.decisions);
+    const nIncluded = decided.filter(([, v]) => v === "in").length;
+    const nExcluded = decided.filter(([, v]) => v === "out").length;
+
+    const themeCards = PAPERS.filter(p => p.theme === st.theme);
+    const cards = themeCards.map(p => {
+      const d = st.decisions[p.id];
+      return {
+        title:p.title, meta:p.meta, summary:p.summary, score:p.score,
+        scoreColor:this.scoreColor(p.score, false),
+        chips:p.chips.map(label => ({label})),
+        status: d === "in" ? "INCLUDED" : d === "out" ? "EXCLUDED" : "unscreened",
+        cardBg: d === "in" ? "rgba(89,128,166,.1)" : d === "out" ? "rgba(29,31,32,.05)" : "transparent",
+        include: () => this.setState(s => ({decisions:{...s.decisions, [p.id]:"in"}})),
+        exclude: () => this.setState(s => ({decisions:{...s.decisions, [p.id]:"out"}}))
+      };
+    });
+
+    return {
+      run:this.run,
+      runLabel: st.phase === "running" ? "Stop" : "Run review",
+      progressPct: st.progress + "%",
+      elapsed: st.elapsed,
+      statusLine: st.phase === "running"
+        ? "Scoring " + Math.max(1, st.revealed) + "/40 · rubric pass · llama3.1:8b ×4"
+        : "40 scored · 148 deduped from 200 · 31 PDFs saved",
+      rows, darkRows,
+      sel: mk(st.selId, dark),
+      darkSel: mk(st.darkSelId, true),
+      themeVars: Component.THEMES[st.mode],
+      setLight: () => this.setState({mode:"light"}),
+      setDark: () => this.setState({mode:"dark"}),
+      lightBg: dark ? "transparent" : "#5980a6",
+      lightFg: dark ? "#999990" : "#f2f2f3",
+      darkBg: dark ? "#c4a96a" : "transparent",
+      darkFg: dark ? "#0e0e0e" : "rgba(29,31,32,.55)",
+      themes: THEMES.map(t => ({
+        name:t.name, n:t.n,
+        bg: st.theme === t.name ? "rgba(89,128,166,.14)" : "transparent",
+        dots: this.bars(Math.min(t.n, 6), 6, 6, false),
+        pick: () => this.setState({theme:t.name})
+      })),
+      themeTitle: st.theme,
+      queueLine: themeCards.length + " of 40 scored papers in this cluster",
+      cards, nIncluded, nExcluded,
+      funnelIncW: Math.max(12, nIncluded * 9) + "%",
+      funnelExcW: Math.max(12, nExcluded * 9) + "%"
+    };
+  }
+}
+</script>
+</body>
+</html>
