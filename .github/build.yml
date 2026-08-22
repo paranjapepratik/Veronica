@@ -1,0 +1,95 @@
+name: Build
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: Linux
+          - os: windows-latest
+            label: Windows
+          - os: macos-latest
+            label: macOS
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install tkinter (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y python3-tk
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build
+        run: pyinstaller --noconfirm veronica.spec
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: tar -czf Veronica-linux-x86_64.tar.gz -C dist Veronica
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: ditto -c -k --sequesterRsrc --keepParent dist/Veronica.app Veronica-macos.zip
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path dist/Veronica -DestinationPath Veronica-windows.zip
+        shell: pwsh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Veronica-${{ matrix.label }}
+          path: |
+            Veronica-*.zip
+            Veronica-*.tar.gz
+          if-no-files-found: error
+
+  release:
+    name: Attach to release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: dist
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          body: |
+            **Veronica** - local AI literature review.
+
+            | Download | For |
+            |---|---|
+            | \`Veronica-windows.zip\` | Windows 10/11 - unzip, run \`Veronica.exe\` |
+            | \`Veronica-macos.zip\` | macOS - unzip, right-click \`Veronica.app\` then Open (unsigned) |
+            | \`Veronica-linux-x86_64.tar.gz\` | Linux - extract, run \`./Veronica/Veronica\` |
+
+            Or run from source: \`pip install -r requirements.txt && python3 veronica.py\`
+
+            Searching, local ranking, screening and the Excel/Word/RIS exports work with no
+            model installed. AI scoring and Draft review need [Ollama](https://ollama.com):
+            \`ollama pull llama3.2:3b\` (scoring) and \`ollama pull llama3.1:8b\` (drafting).
