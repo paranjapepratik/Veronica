@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# PyInstaller
+build/
+dist/
+*.manifest
+
+# Veronica local state and output
+.veronica.json
+Veronica/
+
+# OS
+.DS_Store
+Thumbs.db
